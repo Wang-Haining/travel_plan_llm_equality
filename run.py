@@ -103,20 +103,19 @@ if __name__ == '__main__':
             budget = random.choice(accommodations_budget)
         else:
             budget = random.choice(activities_budget)
-        metadata = {
-        'gender': random.choice(GENDER),
-        'sex orientation': random.choice(SEX_ORIENTATION)
-        'age': random.choice(AGE),
-        'education background': random.choice(EDUCATION_BACKGROUND),
-        'income': random.choice(INCOME),
-        'duration': random.choice(DURATION),
-        'destination': random.choice(DESTINATION),
-        'time of year': random.choice(TIME_OF_YEAR),
-        'previous experience': random.choice(PREVIOUS_EXPERIENCE),
-        'budget': budget}
+        metadata = {'gender': random.choice(GENDER),
+                    'sex orientation': random.choice(SEX_ORIENTATION),
+                    'age': random.choice(AGE),
+                    'education background': random.choice(EDUCATION_BACKGROUND),
+                    'income': random.choice(INCOME),
+                    'duration': random.choice(DURATION),
+                    'destination': random.choice(DESTINATION),
+                    'time of year': random.choice(TIME_OF_YEAR),
+                    'previous experience': random.choice(PREVIOUS_EXPERIENCE),
+                    'budget': budget}
 
         prompt = (f"{B_INST} {B_SYS}{SYSTEM_PROMT}{E_SYS}{query}\n\n"
-            f"{metadata}{E_INST}\n\n")
+                  f"{metadata}{E_INST}\n\n")
 
         # generation
         inputs = tokenizer([prompt], return_tensors="pt").to(device)
