@@ -68,8 +68,8 @@ if __name__ == '__main__':
     model_name = model_names[args.model_name]
 
     print("*" * 88)
-    print(f"Running the experiments of Service Equality in AI-powered Virtual "
-          f"Reference...")
+    print(f"Running the experiments of service equality in LLM-powered traval "
+          f"planning...")
 
     device = 'cuda:0'
 
@@ -124,11 +124,11 @@ if __name__ == '__main__':
                                   do_sample=True)
         # only keep the answer
         new_token_ids = response[0, input_length:]
-        librarian_says = tokenizer.decode(new_token_ids,
+        llm_says = tokenizer.decode(new_token_ids,
                                           skip_special_tokens=True)
 
         metadata.update({'prompt': prompt,
-                         'LLM_says': librarian_says,
+                         'LLM_says': llm_says,
                          'model_name': args.model_name})
         results.append(metadata)
 
