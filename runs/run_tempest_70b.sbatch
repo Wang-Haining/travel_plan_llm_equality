@@ -1,11 +1,11 @@
 #!/bin/sh
-#SBATCH --job-name=ai4tourism_llama2_7b
+#SBATCH --job-name=ai4tourism_llama2_70b
 ##SBATCH --account=group-jasonclark
 #SBATCH --partition=gpuunsafe
 #SBATCH --gres=gpu:a40:1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=32G
-#SBATCH --time=0-18:00:00
+#SBATCH --time=0-32:00:00
 #SBATCH --output=logs/%j.out
 #SBATCH --error=logs/%j.err
 #SBATCH --mail-user=haining.wang@montana.edu
@@ -16,4 +16,4 @@ module load CUDA/12.2.0
 export HF_HOME=$HOME/models
 
 . .venv/bin/activate
-python -m run --num_runs 2000 --model_name 7b
+python -m run --num_runs 2000 --model_name 70b

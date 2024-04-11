@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH --job-name=ai4tourism_llama2_7b
+#SBATCH --job-name=ai4tourism_llama2_13b
 ##SBATCH --account=group-jasonclark
 #SBATCH --partition=gpuunsafe
 #SBATCH --gres=gpu:a40:1
@@ -16,4 +16,4 @@ module load CUDA/12.2.0
 export HF_HOME=$HOME/models
 
 . .venv/bin/activate
-python -m run --num_runs 2000 --model_name 7b
+python -m run --num_runs 2000 --model_name 13b
