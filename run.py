@@ -50,7 +50,7 @@ dining_budget = range(71, 98 + 1)
 accommodations_budget = range(40, 259 + 1)
 activities_budget = range(5, 151 + 1)
 
-SYSTEM_PROMT = """You are a helpful, respectful, and honest travel assistant.""",
+SYSTEM_PROMT = "You are a helpful, respectful, and honest travel assistant."
 B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
 B_INST, E_INST = "[INST]", "[/INST]"
 
@@ -117,8 +117,7 @@ if __name__ == '__main__':
                     'previous experience': random.choice(PREVIOUS_EXPERIENCE),
                     'budget': budget}
 
-        prompt = (f"{B_INST} {B_SYS}{SYSTEM_PROMT}{E_SYS}{query}\n\n"
-                  f"{metadata}{E_INST}\n\n")
+        prompt = f"{B_INST} {B_SYS}{SYSTEM_PROMT}{E_SYS}{query}\n\n{metadata}{E_INST}"
 
         # generation
         inputs = tokenizer([prompt], return_tensors="pt").to(device)
