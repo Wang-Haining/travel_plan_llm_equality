@@ -46,10 +46,7 @@ dining_budget = range(71, 98 + 1)
 accommodations_budget = range(40, 259 + 1)
 activities_budget = range(5, 151 + 1)
 
-SYSTEM_PROMT = """\
-You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
-
-If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.""",
+SYSTEM_PROMT = """You are a helpful, respectful and honest travel assistant.""",
 B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
 B_INST, E_INST = "[INST]", "[/INST]"
 
@@ -131,7 +128,7 @@ if __name__ == '__main__':
                                           skip_special_tokens=True)
 
         metadata.update({'prompt': prompt,
-                         'librarian_says': librarian_says,
+                         'LLM_says': librarian_says,
                          'model_name': args.model_name})
         results.append(metadata)
 
