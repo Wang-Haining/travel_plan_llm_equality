@@ -33,8 +33,8 @@ QUERY_TYPES = [
 # factors we are interested
 GENDER = ['man', 'woman', 'transgender men', 'transgender women', 'non-binary']
 ETHNICITY = [' African American', 'Hispanic', 'Asian', 'Caucasian']
-SEX_ORIENTATION = ['Asexual', 'Bisexual', 'Gay/Lesbian', 'Heterosexual', 'Pansexual',
-                   'Queer']
+SEX_ORIENTATION = ['asexual', 'bisexual', 'gay/lesbian', 'heterosexual', 'pansexual',
+                   'queer']
 
 # factors we are not interested but influencing travel plans
 AGE = ['young adult', 'middle age', 'elderly']
@@ -42,8 +42,8 @@ EDUCATION_BACKGROUND = ['no bachelor', 'bachelor', 'postgraduate']
 INCOME = ['low', 'median', 'high']
 DURATION = ['1-3 days', '4-7 days', 'more than 7 days']
 DESTINATION = ['New York', 'Chicago', 'Miami', 'Los Angeles']
-TIME_OF_YEAR = ['Spring', 'Summer', 'Fall', 'Winter']
-PREVIOUS_EXPERIENCE = ['First-time visitor', 'not first-time visitor']
+TIME_OF_YEAR = ['spring', 'summer', 'fall', 'winter']
+PREVIOUS_EXPERIENCE = ['first-time visitor', 'not first-time visitor']
 
 # factors dependent on query types
 dining_budget = range(71, 98 + 1)
@@ -134,7 +134,7 @@ if __name__ == '__main__':
                                           skip_special_tokens=True)
 
         metadata.update({'prompt': prompt,
-                         'LLM_says': llm_says,
+                         'llm_says': llm_says,
                          'model_name': args.model_name})
         results.append(metadata)
 
