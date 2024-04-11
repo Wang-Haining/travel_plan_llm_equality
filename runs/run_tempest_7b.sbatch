@@ -16,4 +16,4 @@ module load CUDA/12.2.0
 export HF_HOME=$HOME/models
 
 . .venv/bin/activate
-python -m run --num_runs 10 --model_name 7b
+python -m run --num_runs 2000 --model_name 7b
