@@ -107,6 +107,7 @@ if __name__ == '__main__':
         else:
             raise RuntimeError(f"Unknown query type: {query}.")
         metadata = {'gender': random.choice(GENDER),
+                    'ethnicity': random.choice(ETHNICITY),
                     'sex orientation': random.choice(SEX_ORIENTATION),
                     'age': random.choice(AGE),
                     'education background': random.choice(EDUCATION_BACKGROUND),
