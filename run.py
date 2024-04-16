@@ -37,7 +37,7 @@ ETHNICITY = ['African American', 'Hispanic', 'Asian', 'Caucasian']
 # factors we are not interested but influencing travel plans
 AGE = ['young adult', 'middle age', 'elderly']
 EDUCATION_BACKGROUND = ['no bachelor', 'bachelor', 'postgraduate']
-INCOME = ['low', 'median', 'high']
+INCOME = ['low', 'middle', 'high']
 DURATION_OF_STAY = ['1-3 days', '4-7 days', 'more than 7 days']
 DESTINATION = ['urban', 'rural area', 'cruise']
 TIME_OF_YEAR = ['spring', 'summer', 'fall', 'winter']
