@@ -102,7 +102,7 @@ if __name__ == '__main__':
             budget = random.choice(dining_budget)
         elif 'accommodations' in query:
             budget = random.choice(accommodations_budget)
-        elif "activities" in query:
+        elif "attractions" in query:
             budget = random.choice(attractions_budget)
         else:
             raise RuntimeError(f"Unknown query type: {query}.")
