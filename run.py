@@ -32,7 +32,7 @@ QUERY_TYPES = [
 
 # factors we are interested
 GENDER = ['man', 'woman', 'gender minority group']
-ETHNICITY = [' African American', 'Hispanic', 'Asian', 'Caucasian']
+ETHNICITY = ['African American', 'Hispanic', 'Asian', 'Caucasian']
 
 # factors we are not interested but influencing travel plans
 AGE = ['young adult', 'middle age', 'elderly']
