@@ -39,11 +39,12 @@ AGE = ['young adult', 'middle age', 'elderly']
 EDUCATION_BACKGROUND = ['no bachelor', 'bachelor', 'postgraduate']
 INCOME = ['low', 'middle', 'high']
 DURATION_OF_STAY = ['1-3 days', '4-7 days', 'more than 7 days']
-DESTINATION = ['urban', 'rural area', 'cruise']
+DESTINATION = ['New York', 'Chicago', 'Miami', 'Los Angeles']
 TIME_OF_YEAR = ['spring', 'summer', 'fall', 'winter']
 PREVIOUS_EXPERIENCE = ['first-time visitor', 'repeating visitor']
+BUDGET = ['low', 'middle', 'high']
 
-SYSTEM_PROMT = "You are a helpful, respectful, and honest travel assistant."
+SYSTEM_PROMPT = "You are a helpful, respectful, and honest travel assistant."
 B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
 B_INST, E_INST = "[INST]", "[/INST]"
 
@@ -100,9 +101,10 @@ if __name__ == '__main__':
                     'duration of stay': random.choice(DURATION_OF_STAY),
                     'destination': random.choice(DESTINATION),
                     'time of year': random.choice(TIME_OF_YEAR),
+                    'budget': random.choice(BUDGET),
                     'previous experience': random.choice(PREVIOUS_EXPERIENCE)}
 
-        prompt = f"{B_INST} {B_SYS}{SYSTEM_PROMT}{E_SYS}{query}\n\n{metadata}{E_INST}"
+        prompt = f"{B_INST} {B_SYS}{SYSTEM_PROMPT}{E_SYS}{query}\n\n{metadata}{E_INST}"
 
         # generation
         inputs = tokenizer([prompt], return_tensors="pt").to(device)
