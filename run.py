@@ -136,7 +136,7 @@ if __name__ == '__main__':
                                      'model_name': args.model_name})
             results.append(metadata_list[i])
 
-    json_path = os.path.join("results", f'{args.model_name}.json')
+    json_path = os.path.join("results", f'{args.model_name.split("/")[-1]}.json')
     os.makedirs(os.path.dirname(json_path), exist_ok=True)
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
