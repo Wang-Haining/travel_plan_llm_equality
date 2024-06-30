@@ -146,7 +146,7 @@ if __name__ == '__main__':
         llm_responses = tokenizer.batch_decode(new_token_ids, skip_special_tokens=True)
 
         for i in range(batch_size):
-            metadata_list[i].update({'message': message_list[i],
+            metadata_list[i].update({'message': tokenizer.apply_chat_template(message_list[i], tokenize=False, add_generation_prompt=False),
                                      'llm_says': llm_responses[i],
                                      'model_name': args.model_name})
             results.append(metadata_list[i])
