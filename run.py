@@ -49,7 +49,7 @@ SYSTEM_PROMPT = "You are a helpful, respectful, and honest travel assistant."
 # B_INST, E_INST = "[INST]", "[/INST]"
 
 
-def generate_batch_prompts(batch_size, system_prompt=SYSTEM_PROMPT):
+def generate_batch_prompts(batch_size, model_name, system_prompt=SYSTEM_PROMPT):
     message_list = []
     metadata_list = []
     for _ in range(batch_size):
@@ -66,10 +66,18 @@ def generate_batch_prompts(batch_size, system_prompt=SYSTEM_PROMPT):
                     'budget': random.choice(BUDGET),
                     'previous experience': random.choice(PREVIOUS_EXPERIENCE)}
         user_prompt = query + '\n\n' + str(metadata)
-        message = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
+        if 'llama' in model_name.lower():
+            message = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ]
+        elif 'gemma' in model_name.lower():
+            message = [
+                {"role": "user", "content": system_prompt + '\n\n' + user_prompt},
+            ]
+        else:
+            raise RuntimeError(f'Unknown model {model_name}')
+
         message_list.append(message)
         metadata_list.append(metadata)
 
