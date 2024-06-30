@@ -108,8 +108,8 @@ if __name__ == '__main__':
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     # llama3 does not have a pad token
-    if 'llama' in args.model_name.lower():
-        tokenizer.pad_token_id = tokenizer.eos_token_id
+    # if 'llama' in args.model_name.lower():
+    #     tokenizer.pad_token_id = tokenizer.eos_token_id
 
     if '27b' or '70b' in args.model_name.lower():
         quantization_config = BitsAndBytesConfig(
