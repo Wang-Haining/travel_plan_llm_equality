@@ -1,6 +1,6 @@
 """
 This module encapsulates functionality for conducting experiments to assess the gender,
-ethnicity, and sec orientation bias in LLM-based traval planning.
+ethnicity, and sec orientation bias in LLM-based travel planning.
 """
 
 __license__ = '0BSD'
@@ -49,48 +49,10 @@ B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
 B_INST, E_INST = "[INST]", "[/INST]"
 
 
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser(
-        description='Service Equality in LLM-powered Travel Planning')
-    parser.add_argument('--num_runs', type=int, default=2000,
-                        help='Number of generated outputs will be obtained')
-    parser.add_argument('--model_name', type=str,
-                        choices=['7b', '13b', '70b'], default='7b',
-                        help='Llama2-Chat size')
-    args = parser.parse_args()
-
-    model_names = {'7b': "meta-llama/Llama-2-7b-chat-hf",
-                   '13b': "meta-llama/Llama-2-13b-chat-hf",
-                   '70b': "meta-llama/Llama-2-70b-chat-hf"}
-    model_name = model_names[args.model_name]
-
-    print("*" * 88)
-    print(f"Running the experiments of service equality in LLM-powered traval "
-          f"planning...")
-
-    device = 'cuda:0'
-
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-
-    if '13' or '70' in model_name:
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16
-        )
-    else:
-        quantization_config = None
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        torch_dtype=torch.float16,
-        quantization_config=quantization_config,
-        device_map=device,
-    )
-
-    # document the results
-    results = []
-    for i in tqdm(range(args.num_runs)):
+def generate_batch_prompts(batch_size):
+    prompts = []
+    metadata_list = []
+    for _ in range(batch_size):
         query = random.choice(QUERY_TYPES)
 
         metadata = {'gender': random.choice(GENDER),
@@ -105,26 +67,77 @@ if __name__ == '__main__':
                     'previous experience': random.choice(PREVIOUS_EXPERIENCE)}
 
         prompt = f"{B_INST} {B_SYS}{SYSTEM_PROMPT}{E_SYS}{query}\n\n{metadata}{E_INST}"
+        prompts.append(prompt)
+        metadata_list.append(metadata)
 
-        # generation
-        inputs = tokenizer([prompt], return_tensors="pt").to(device)
-        input_length = len(inputs["input_ids"][0])
-        response = model.generate(**inputs,
-                                  max_new_tokens=3069,
-                                  temperature=0.7,
-                                  top_p=0.9,
-                                  do_sample=True)
-        # only keep the answer
-        new_token_ids = response[0, input_length:]
-        llm_says = tokenizer.decode(new_token_ids,
-                                          skip_special_tokens=True)
+    return prompts, metadata_list
 
-        metadata.update({'prompt': prompt,
-                         'llm_says': llm_says,
-                         'model_name': args.model_name})
-        results.append(metadata)
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+        description='Service Equality in LLM-powered Travel Planning')
+    parser.add_argument('--num_runs', type=int, default=2000,
+                        help='Number of generated outputs will be obtained')
+    parser.add_argument('--model_name', type=str,
+                        choices=['meta-llama/Meta-Llama-3-8B-Instruct',
+                                 'meta-llama/Meta-Llama-3-70B-Instruct',
+                                 'google/gemma-2-9b-it',
+                                 'google/gemma-2-27b-it'],
+                        help='Model name from Hugging Face')
+    parser.add_argument('--batch_size', type=int, default=10,
+                        help='Batch size for processing prompts')
+    args = parser.parse_args()
+
+    print("*" * 88)
+    print(f"Running the experiments of service equality in LLM-powered travel "
+          f"planning using {args.model_name.split('/')[-1]}")
+
+    device = 'cuda:0'
+
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    if 'llama' in args.model_name.lower():
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+
+    if '27b' or '70b' in args.model_name.lower():
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.bfloat16
+        )
+    else:
+        quantization_config = None
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model_name,
+        torch_dtype=torch.float16,
+        quantization_config=quantization_config,
+        device_map=device,
+    )
+
+    # document the results
+    results = []
+    for _ in tqdm(range(0, args.num_runs, args.batch_size)):
+        batch_size = min(args.batch_size, args.num_runs - len(results))
+        prompts, metadata_list = generate_batch_prompts(batch_size)
+
+        inputs = tokenizer(prompts, return_tensors="pt", padding=True,
+                           truncation=True).to(device)
+        input_lengths = [len(input_ids) for input_ids in inputs["input_ids"]]
+        responses = model.generate(**inputs,
+                                   max_new_tokens=3069,
+                                   temperature=0.7,
+                                   top_p=0.9,
+                                   do_sample=True)
+
+        for i in range(batch_size):
+            new_token_ids = responses[i, input_lengths[i]:]
+            llm_says = tokenizer.decode(new_token_ids, skip_special_tokens=True)
+            metadata_list[i].update({'prompt': prompts[i],
+                                     'llm_says': llm_says,
+                                     'model_name': args.model_name})
+            results.append(metadata_list[i])
 
     json_path = os.path.join("results", f'{args.model_name}.json')
+    os.makedirs(os.path.dirname(json_path), exist_ok=True)
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
 

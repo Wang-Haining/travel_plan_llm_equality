@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH --job-name=ai4tourism_llama2_70b
+#SBATCH --job-name=llama3_8b
 ##SBATCH --account=group-jasonclark
 #SBATCH --partition=gpuunsafe
 #SBATCH --gres=gpu:a40:1
@@ -16,4 +16,4 @@ module load CUDA/12.2.0
 export HF_HOME=$HOME/models
 
 . .venv/bin/activate
-python -m run --num_runs 2000 --model_name 70b
+python -m run --num_runs 2000 --model_name 'meta-llama/Meta-Llama-3-8B-Instruct' --batch_size 10
