@@ -129,7 +129,7 @@ if __name__ == '__main__':
     results = []
     for _ in tqdm(range(0, args.num_runs, args.batch_size)):
         batch_size = min(args.batch_size, args.num_runs - len(results))
-        message_list, metadata_list = generate_batch_prompts(batch_size)
+        message_list, metadata_list = generate_batch_prompts(batch_size, args.model_name)
         input_ids = tokenizer.apply_chat_template(
             message_list,
             add_generation_prompt=True,
