@@ -126,13 +126,6 @@ if __name__ == '__main__':
     if 'llama' in args.model_name.lower():
         tokenizer.pad_token = tokenizer.eos_token
         model.generation_config.pad_token_id = tokenizer.pad_token_id
-        terminators = [
-            "<|end_of_text|>",
-            "<|eot_id|>",
-            "assistant\n\n",
-        ]
-    else:
-        terminators = [tokenizer.eos_token, tokenizer.pad_token]
 
     # document the results
     results = []
@@ -149,7 +142,6 @@ if __name__ == '__main__':
                                  max_new_tokens=3069,
                                  temperature=0.7,
                                  top_p=0.9,
-                                 eos_token_id=terminators,
                                  do_sample=True)
 
         new_token_ids = [output[input_id.shape[-1]:] for output, input_id in zip(outputs, input_ids)]
@@ -160,7 +152,7 @@ if __name__ == '__main__':
                                                     tokenize=False,
                                                     add_generation_prompt=False)
             metadata_list[i].update({'message': message,
-                                     'llm_says': llm_responses[i],
+                                     'llm_says': llm_responses[i].lstrip('assistant\n\n'),  # llama3's quirk
                                      'model_name': args.model_name})
             results.append(metadata_list[i])
 
