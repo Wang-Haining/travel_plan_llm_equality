@@ -107,15 +107,6 @@ if __name__ == '__main__':
     device = 'cuda:0'
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
-    # llama3 does not have a pad token
-    if 'llama' in args.model_name.lower():
-        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        terminators = [
-            tokenizer.eos_token_id,
-            tokenizer.pad_token_id,
-        ]
-    else:
-        terminators = [tokenizer.eos_token_id]
 
     if '27b' or '70b' in args.model_name.lower():
         quantization_config = BitsAndBytesConfig(
@@ -131,6 +122,9 @@ if __name__ == '__main__':
         device_map=device,
     )
 
+    # llama3 does not have a pad token
+    if 'llama' in args.model_name.lower():
+        model.generation_config.pad_token_id = tokenizer.pad_token_id
     # document the results
     results = []
     for _ in tqdm(range(0, args.num_runs, args.batch_size)):
@@ -146,7 +140,6 @@ if __name__ == '__main__':
                                  max_new_tokens=3069,
                                  temperature=0.7,
                                  top_p=0.9,
-                                 eos_token_id=terminators,
                                  do_sample=True)
 
         new_token_ids = [output[input_id.shape[-1]:] for output, input_id in zip(outputs, input_ids)]
