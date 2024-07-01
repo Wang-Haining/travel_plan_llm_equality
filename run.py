@@ -149,6 +149,7 @@ if __name__ == '__main__':
                                  max_new_tokens=3069,
                                  temperature=0.7,
                                  top_p=0.9,
+                                 terminators=terminators,
                                  do_sample=True)
 
         new_token_ids = [output[input_id.shape[-1]:] for output, input_id in zip(outputs, input_ids)]
