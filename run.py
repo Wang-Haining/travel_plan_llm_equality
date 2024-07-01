@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name, padding_side='left')
 
-    if '27b' or '70b' in args.model_name.lower():
+    if '70b' in args.model_name.lower():
         quantization_config = BitsAndBytesConfig(
             load_in_4bit=True,
             # bnb_4bit_compute_dtype=torch.bfloat16
