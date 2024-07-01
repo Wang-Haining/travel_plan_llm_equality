@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
     device = 'cuda:0'
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name, padding_side='left')
 
     if '27b' or '70b' in args.model_name.lower():
         quantization_config = BitsAndBytesConfig(
