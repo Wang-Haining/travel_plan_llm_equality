@@ -124,7 +124,9 @@ if __name__ == '__main__':
 
     # llama3 does not have a pad token
     if 'llama' in args.model_name.lower():
+        tokenizer.pad_token = tokenizer.eos_token
         model.generation_config.pad_token_id = tokenizer.pad_token_id
+
     # document the results
     results = []
     for _ in tqdm(range(0, args.num_runs, args.batch_size)):
