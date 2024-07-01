@@ -120,6 +120,7 @@ if __name__ == '__main__':
         torch_dtype=torch.float16,
         quantization_config=quantization_config,
         device_map=device,
+        force_download=True
     )
 
     # llama3 does not have a pad token
