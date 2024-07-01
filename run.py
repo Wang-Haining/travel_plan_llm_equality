@@ -110,8 +110,8 @@ if __name__ == '__main__':
 
     if '27b' or '70b' in args.model_name.lower():
         quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16
+            load_in_8bit=True,
+            bnb_8bit_compute_dtype=torch.bfloat16
         )
     else:
         quantization_config = None
@@ -126,6 +126,13 @@ if __name__ == '__main__':
     if 'llama' in args.model_name.lower():
         tokenizer.pad_token = tokenizer.eos_token
         model.generation_config.pad_token_id = tokenizer.pad_token_id
+        terminators = [
+            "<|end_of_text|>",
+            "<|eot_id|>",
+            "assistant\n\n",
+        ]
+    else:
+        terminators = [tokenizer.eos_token, tokenizer.pad_token]
 
     # document the results
     results = []
