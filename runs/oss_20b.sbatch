@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:h100:1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=64G
-#SBATCH --time=8-00:00:00
+#SBATCH --time=08:00:00
 #SBATCH --output=logs/%j.out
 #SBATCH --error=logs/%j.err
 #SBATCH --mail-user=haining.wang@montana.edu
@@ -25,7 +25,7 @@ export HF_HOME="${HF_HOME:-$HOME/models}"                             # host-sid
 export IMG_FILE="${IMG_FILE:-$HOME/containers/vllm-gptoss.sif}"      # apptainer image with vLLM
 export HF_TOKEN="${HF_TOKEN:-$(cat "$HF_HOME/token" 2>/dev/null || true)}"
 
-# --- python env for your client script ---
+# --- python env for client script ---
 . .venv/bin/activate
 
 # --- vLLM knobs (adjust via env if needed) ---
@@ -91,11 +91,11 @@ for i in $(seq 1 $ATTEMPTS); do
   sleep 2
 done
 
-# tell your client where the OpenAI-compatible endpoint is
+# tell client where the OpenAI-compatible endpoint is
 export VLLM_BASE_URL="${API}/v1"
 
-# --- run your study script against the OSS model served by vLLM ---
-# note: uses your updated script that reads VLLM_BASE_URL
+# --- run study script against the OSS model served by vLLM ---
+# note: uses updated script that reads VLLM_BASE_URL
 python -u -m run --num_runs 2000 --model_name 'openai/gpt-oss-20b' --batch_size 10
 
 echo "[done]"
