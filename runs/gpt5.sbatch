@@ -5,7 +5,7 @@
 #SBATCH --partition=unsafe
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=64G
-#SBATCH --time=4-00:00:00
+#SBATCH --time=08:00:00
 #SBATCH --output=logs/%j.out
 #SBATCH --error=logs/%j.err
 #SBATCH --mail-user=haining.wang@montana.edu
