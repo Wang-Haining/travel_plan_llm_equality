@@ -21,21 +21,19 @@ source "$HOME/.bashrc" 2>/dev/null || true
 
 # --- paths and cache ---
 mkdir -p logs
-export HF_HOME="${HF_HOME:-$HOME/models}"                     # host hf cache
-export IMG_FILE="${IMG_FILE:-$HOME/containers/vllm-gptoss.sif}"  # apptainer image with vLLM
-
-# honor file-based HF token if env missing
+export HF_HOME="${HF_HOME:-$HOME/models}"                             # host-side HF cache
+export IMG_FILE="${IMG_FILE:-$HOME/containers/vllm-gptoss.sif}"      # apptainer image with vLLM
 export HF_TOKEN="${HF_TOKEN:-$(cat "$HF_HOME/token" 2>/dev/null || true)}"
 
-# --- python env ---
+# --- python env for your client script ---
 . .venv/bin/activate
 
-# --- vLLM knobs ---
-MODEL="${MODEL:-openai/gpt-oss-20b}"   # switch to openai/gpt-oss-20b if needed
+# --- vLLM knobs (adjust via env if needed) ---
+MODEL="${MODEL:-openai/gpt-oss-20b}"   # set to openai/gpt-oss-20b if OOM on 1xH100
 HOST="127.0.0.1"
 PORT="${PORT:-8000}"
-MAXLEN="${MAXLEN:-10240}"
-MAX_SEQS="${MAX_SEQS:-64}"
+MAXLEN="${MAXLEN:-131072}"
+MAX_SEQS="${MAX_SEQS:-128}"
 GPU_UTIL="${GPU_UTIL:-0.90}"
 
 # --- choose a free port starting at $PORT ---
@@ -53,16 +51,17 @@ command -v apptainer >/dev/null || { echo "[fatal] apptainer not found"; exit 90
 
 echo "[server] launching vLLM in apptainer for ${MODEL} at ${API}"
 
-# start vLLM server inside apptainer container (OpenAI-compatible)
+# start vLLM server inside apptainer (OpenAI-compatible)
+# bind HF cache to a neutral path that always exists and use it as download dir
 apptainer exec --nv --cleanenv \
-  --bind "$HF_HOME":/root/.cache/huggingface \
+  --bind "$HF_HOME":/cache/hf \
   --env HF_TOKEN="${HF_TOKEN}",PYTHONNOUSERSITE=1,PIP_USER=no,TRANSFORMERS_NO_ADVISORY_WARNINGS=1 \
   "$IMG_FILE" bash -lc "
 set -euo pipefail
 python3 -m vllm.entrypoints.openai.api_server \
   --model '${MODEL}' \
   --served-model-name '${MODEL}' \
-  --download-dir /root/.cache/huggingface \
+  --download-dir /cache/hf \
   --host 0.0.0.0 --port ${PORT} \
   --max-model-len ${MAXLEN} \
   --max-num-seqs ${MAX_SEQS} \
@@ -92,10 +91,11 @@ for i in $(seq 1 $ATTEMPTS); do
   sleep 2
 done
 
-# tell the client where to find the OpenAI-compatible endpoint
+# tell your client where the OpenAI-compatible endpoint is
 export VLLM_BASE_URL="${API}/v1"
 
 # --- run your study script against the OSS model served by vLLM ---
-python -m run --num_runs 2000 --model_name 'openai/gpt-oss-20b' --batch_size 10
+# note: uses your updated script that reads VLLM_BASE_URL
+python -u -m run --num_runs 2000 --model_name 'openai/gpt-oss-20b' --batch_size 10
 
 echo "[done]"
