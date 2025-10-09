@@ -27,9 +27,9 @@ fi
 
 # ---- model/server knobs ----
 MODEL="${MODEL:-openai/gpt-oss-120b}"
-TP="${TP:-2}"                         # tensor parallel (we request 2 H100)
+TP="${TP:-2}"
 GPU_UTIL="${GPU_UTIL:-0.90}"
-MAXLEN="${MAXLEN:-124000}"
+MAXLEN="${MAXLEN:-10240}"
 MAX_SEQS="${MAX_SEQS:-64}"
 
 # ---- container & cache ----
