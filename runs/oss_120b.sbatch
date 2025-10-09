@@ -117,8 +117,8 @@ done
 # ---- run travel fairness experiment (client) ----
 export VLLM_BASE_URL="${API}"
 
-echo "[client] running travel_fairness.py with 2000 generations on ${MODEL}"
-python3 travel_fairness.py \
+echo "[client] running travel_fairness.py with 200 generations on ${MODEL}"
+python3 run.py \
   --model_name "${MODEL}" \
   --num_runs 200 \
   --batch_size 64 \
