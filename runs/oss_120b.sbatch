@@ -100,7 +100,7 @@ SERVER_PID=$!
 
 # ---- readiness probe ----
 echo "[server] waiting for ${API}/v1/models ..."
-MAX_ATTEMPTS=180
+MAX_ATTEMPTS=600
 for attempt in $(seq 1 $MAX_ATTEMPTS); do
   if curl -fsS "${API}/v1/models" >/dev/null 2>&1; then
     echo "[server] ready (attempt ${attempt})"
