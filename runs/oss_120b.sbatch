@@ -21,9 +21,7 @@ mkdir -p logs
 export PYTHONUNBUFFERED=1
 
 # activate venv if present
-if [[ -f ".venv/bin/activate" ]]; then
-  source .venv/bin/activate
-fi
+[[ -f ".venv/bin/activate" ]] && source .venv/bin/activate
 
 # ---- model/server knobs ----
 MODEL="${MODEL:-openai/gpt-oss-120b}"
@@ -44,7 +42,6 @@ PORT="${PORT:-8020}"
 
 # honor file-based HF token if env missing
 export HF_TOKEN="${HF_TOKEN:-$(cat "$HF_HOME/token" 2>/dev/null || echo)}"
-export OPENAI_API_KEY="${OPENAI_API_KEY:-EMPTY}"  # vLLM accepts any key; client can send anything
 
 # ---- port helpers ----
 port_in_use() {
@@ -78,7 +75,6 @@ apptainer exec --nv --cleanenv \
   --env PYTHONNOUSERSITE=1,PIP_USER=no,TRANSFORMERS_NO_ADVISORY_WARNINGS=1,HF_TOKEN="${HF_TOKEN}",TORCH_COMPILE_DISABLE=1,PYTORCH_JIT=0 \
   "$IMG_FILE" bash --noprofile --norc -c "
 set -euo pipefail
-# keep tokenizers pinned compatible with vLLM wheels in this image
 python3 -m pip install --no-cache-dir --force-reinstall 'tokenizers>=0.21,<0.22' >/dev/null 2>&1 || true
 python3 -m vllm.entrypoints.openai.api_server \
   --model '${MODEL}' \
@@ -104,10 +100,6 @@ MAX_ATTEMPTS=600
 for attempt in $(seq 1 $MAX_ATTEMPTS); do
   if curl -fsS "${API}/v1/models" >/dev/null 2>&1; then
     echo "[server] ready (attempt ${attempt})"
-    echo ""
-    echo "export VLLM_BASE_URL='${API}'"
-    echo "curl -H 'Authorization: Bearer $OPENAI_API_KEY' ${API}/v1/models | jq ."
-    echo ""
     break
   fi
   if [[ "$attempt" -eq $MAX_ATTEMPTS ]]; then
@@ -122,7 +114,7 @@ for attempt in $(seq 1 $MAX_ATTEMPTS); do
   sleep 2
 done
 
-# ---- run travel fairness experiment (2000 generations) ----
+# ---- run travel fairness experiment (client) ----
 export VLLM_BASE_URL="${API}"
 
 echo "[client] running travel_fairness.py with 2000 generations on ${MODEL}"
