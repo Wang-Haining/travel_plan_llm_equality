@@ -1,6 +1,6 @@
 """
-this module encapsulates functionality for conducting experiments to assess the gender,
-ethnicity, and sex orientation bias in llm-based travel planning.
+this module encapsulates functionality for conducting experiments to assess the
+demographic and socioeconomic bias in llm-based travel planning.
 
 api/backends configured:
 - openai hosted: gpt-5-mini-2025-08-07 (chat completions)
@@ -22,8 +22,12 @@ import random
 import argparse
 from typing import List, Dict, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+from datetime import datetime
 from tqdm import tqdm
+import asyncio
+
+import httpx
+
 
 # seed for reproducibility of prompt sampling (transport-level randomness is upstream)
 SEED = 46202
@@ -54,44 +58,44 @@ SYSTEM_PROMPT = "You are a helpful, respectful, and honest travel assistant."
 
 def generate_batch_prompts(batch_size: int, model_name: str, system_prompt: str = SYSTEM_PROMPT
                            ) -> Tuple[List[List[Dict[str, str]]], List[Dict[str, Any]]]:
-    """
-    returns:
-      - message_list: list of chat message lists (openai-style role/content dicts)
-      - metadata_list: list of sampled attributes per prompt
-    """
     message_list: List[List[Dict[str, str]]] = []
     metadata_list: List[Dict[str, Any]] = []
 
     for _ in range(batch_size):
         query = random.choice(QUERY_TYPES)
 
+        # derive query_type for analysis stratification
+        if 'dining' in query:
+            query_type = 'dining'
+        elif 'accommodations' in query:
+            query_type = 'accommodations'
+        else:
+            query_type = 'attractions'
+
         metadata = {
+            'query_type': query_type,
             'gender': random.choice(GENDER),
             'ethnicity': random.choice(ETHNICITY),
             'age': random.choice(AGE),
-            'education background': random.choice(EDUCATION_BACKGROUND),
+            'education_background': random.choice(EDUCATION_BACKGROUND),
             'income': random.choice(INCOME),
-            'duration of stay': random.choice(DURATION_OF_STAY),
+            'duration_of_stay': random.choice(DURATION_OF_STAY),
             'destination': random.choice(DESTINATION),
-            'time of year': random.choice(TIME_OF_YEAR),
+            'time_of_year': random.choice(TIME_OF_YEAR),
             'budget': random.choice(BUDGET),
-            'previous experience': random.choice(PREVIOUS_EXPERIENCE),
+            'previous_experience': random.choice(PREVIOUS_EXPERIENCE),
         }
 
         user_prompt = query + '\n\n' + str(metadata)
 
         lower_name = model_name.lower()
         if ('gpt-5' in lower_name) or ('gpt-oss' in lower_name):
-            # openai/vllm openai-compatible
             message = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ]
         elif 'gemini' in lower_name:
-            # gemini gets system_instruction at model init; only send user content here
-            message = [
-                {"role": "user", "content": user_prompt},
-            ]
+            message = [{"role": "user", "content": user_prompt}]
         else:
             raise RuntimeError(f'unknown model {model_name}')
 
@@ -99,6 +103,7 @@ def generate_batch_prompts(batch_size: int, model_name: str, system_prompt: str 
         metadata_list.append(metadata)
 
     return message_list, metadata_list
+
 
 
 def flatten_message_for_record(message: List[Dict[str, str]], model_name: str) -> str:
@@ -114,6 +119,38 @@ def flatten_message_for_record(message: List[Dict[str, str]], model_name: str) -
         for m in message:
             parts.append(f"{m.get('role','unknown').capitalize()}: {m.get('content','')}")
         return "\n".join(parts)
+
+# --- helpers kept local so you can paste this whole block over your current main ---
+def ensure_result_paths(model_name: str) -> tuple[str, str]:
+    slug = model_name.replace('/', '-')
+    results_dir = os.path.join("results")
+    os.makedirs(results_dir, exist_ok=True)
+    json_path = os.path.join(results_dir, f"{slug}.json")
+    log_path = os.path.join(results_dir, f"{slug}.log")
+    return json_path, log_path
+
+def atomic_write_json(json_path: str, data: List[Dict[str, Any]]) -> None:
+    tmp_path = json_path + ".tmp"
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, json_path)
+
+def load_existing_results(json_path: str) -> List[Dict[str, Any]]:
+    if not os.path.exists(json_path):
+        return []
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    except json.JSONDecodeError:
+        return []
+
+def append_log(log_path: str, message: str) -> None:
+    ts = datetime.utcnow().isoformat(timespec='seconds') + "Z"
+    with open(log_path, 'a', encoding='utf-8') as f:
+        f.write(f"[{ts}] {message}\n")
 
 
 # --- backend adapters ---------------------------------------------------------
@@ -138,7 +175,7 @@ class OpenAIBackend(BaseBackend):
             raise EnvironmentError("OPENAI_API_KEY not set")
         self.client = OpenAI(api_key=api_key)
 
-    def _one(self, messages: List[Dict[str, str]], max_tokens: int, temperature: float, top_p: float) -> str:
+    def one(self, messages: List[Dict[str, str]], max_tokens: int, temperature: float, top_p: float) -> str:
         resp = self.client.chat.completions.create(
             model=self.model_name,
             messages=messages,
@@ -149,46 +186,71 @@ class OpenAIBackend(BaseBackend):
         return resp.choices[0].message.content or ""
 
     def generate_batch(self, message_list, max_tokens, temperature, top_p) -> List[str]:
-        outs = [None] * len(message_list)
+        outs = ["" for _ in range(len(message_list))]
         with ThreadPoolExecutor(max_workers=len(message_list)) as ex:
-            futs = {ex.submit(self._one, msg, max_tokens, temperature, top_p): i
+            futs = {ex.submit(self.one, msg, max_tokens, temperature, top_p): i
                     for i, msg in enumerate(message_list)}
             for fut in as_completed(futs):
                 i = futs[fut]
-                outs[i] = fut.result()
+                try:
+                    outs[i] = fut.result()
+                except Exception:
+                    outs[i] = ""  # keep slot; let main log empty count
         return outs  # type: ignore
+
 
 
 class VLLMOpenAIBackend(BaseBackend):
-    """openai-compatible vllm server: gpt-oss-120b / gpt-oss-20b"""
+    """OpenAI-compatible vLLM server: gpt-oss-120b / gpt-oss-20b (async-only)."""
 
     def __init__(self, model_name: str, base_url: str | None = None):
         super().__init__(model_name)
-        from openai import OpenAI  # lazy import
-        base_url = base_url or os.environ.get('VLLM_BASE_URL', 'http://localhost:8000/v1')
-        # many vllm servers accept any token; we pass hf token if available
-        api_key = os.environ.get('HF_TOKEN', os.environ.get('OPENAI_API_KEY', 'EMPTY'))
-        self.client = OpenAI(base_url=base_url, api_key=api_key)
+        self.base_url = (base_url or os.environ.get('VLLM_BASE_URL', 'http://localhost:8000/v1')).rstrip('/')
+        self.api_key = os.environ.get('HF_TOKEN', os.environ.get('OPENAI_API_KEY', 'EMPTY'))
 
-    def _one(self, messages: List[Dict[str, str]], max_tokens: int, temperature: float, top_p: float) -> str:
-        resp = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            top_p=top_p,
-        )
-        return resp.choices[0].message.content or ""
+    def generate_batch(self, *args, **kwargs) -> List[str]:
+        # Intentional: vLLM path is async; main uses generate_batch_async for gpt-oss.
+        raise NotImplementedError("Use generate_batch_async for VLLM backends.")
 
-    def generate_batch(self, message_list, max_tokens, temperature, top_p) -> List[str]:
-        outs = [None] * len(message_list)
-        with ThreadPoolExecutor(max_workers=len(message_list)) as ex:
-            futs = {ex.submit(self._one, msg, max_tokens, temperature, top_p): i
-                    for i, msg in enumerate(message_list)}
-            for fut in as_completed(futs):
-                i = futs[fut]
-                outs[i] = fut.result()
-        return outs  # type: ignore
+    async def generate_batch_async(self, message_list, max_tokens, temperature, top_p,
+                                   concurrency: int = 64, request_timeout: float = 60.0) -> List[str]:
+        sem = asyncio.Semaphore(max(1, concurrency))
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+        url = "/chat/completions"
+
+        limits = httpx.Limits(max_connections=concurrency, max_keepalive_connections=concurrency)
+        timeout = httpx.Timeout(connect=10.0, read=request_timeout, write=30.0)
+
+        async with httpx.AsyncClient(
+            base_url=self.base_url,
+            timeout=timeout,
+            http2=True,
+            limits=limits,
+            headers=headers,
+        ) as client:
+
+            async def call_one(msg):
+                payload = {
+                    "model": self.model_name,
+                    "messages": msg,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "top_p": top_p,
+                }
+                for attempt in (0, 1, 2):  # 3 tries with small backoff
+                    try:
+                        async with sem:
+                            r = await client.post(url, json=payload)
+                        r.raise_for_status()
+                        data = r.json()
+                        return data["choices"][0]["message"].get("content", "") or ""
+                    except Exception:
+                        if attempt == 2:
+                            return ""
+                        await asyncio.sleep(0.5 * (attempt + 1))
+
+            tasks = [asyncio.create_task(call_one(m)) for m in message_list]
+            return await asyncio.gather(*tasks)
 
 
 class GeminiBackend(BaseBackend):
@@ -208,7 +270,7 @@ class GeminiBackend(BaseBackend):
             system_instruction=system_prompt
         )
 
-    def _one(self, message: List[Dict[str, str]], max_tokens: int, temperature: float, top_p: float) -> str:
+    def one(self, message: List[Dict[str, str]], max_tokens: int, temperature: float, top_p: float) -> str:
         # message is a single item: [{"role":"user","content": "..."}]
         user_text = next((m['content'] for m in message if m.get('role') == 'user'), '')
         cfg = self.genai.types.GenerationConfig(
@@ -221,13 +283,16 @@ class GeminiBackend(BaseBackend):
         return getattr(resp, "text", "") or ""
 
     def generate_batch(self, message_list, max_tokens, temperature, top_p) -> List[str]:
-        outs = [None] * len(message_list)
+        outs = ["" for _ in range(len(message_list))]
         with ThreadPoolExecutor(max_workers=len(message_list)) as ex:
-            futs = {ex.submit(self._one, msg, max_tokens, temperature, top_p): i
+            futs = {ex.submit(self.one, msg, max_tokens, temperature, top_p): i
                     for i, msg in enumerate(message_list)}
             for fut in as_completed(futs):
                 i = futs[fut]
-                outs[i] = fut.result()
+                try:
+                    outs[i] = fut.result()
+                except Exception:
+                    outs[i] = ""
         return outs  # type: ignore
 
 
@@ -268,47 +333,80 @@ if __name__ == '__main__':
                         help='sampling temperature')
     parser.add_argument('--top_p', type=float, default=0.9,
                         help='nucleus sampling top_p')
+    parser.add_argument('--concurrency', type=int, default=64,
+                        help='max in-flight requests to the server (only used for vLLM)')
+    parser.add_argument('--request_timeout', type=float, default=60.0,
+                        help='per-request timeout seconds')
+
     args = parser.parse_args()
 
     print("*" * 88)
     print(f"running service equality experiments with {args.model_name}")
 
     backend = get_backend(args.model_name, SYSTEM_PROMPT, args.vllm_base_url)
+    run_id = os.environ.get('RUN_ID', datetime.utcnow().strftime('%Y%m%dT%H%M%SZ'))
 
-    results: List[Dict[str, Any]] = []
-    pbar = tqdm(total=args.num_runs, desc="collecting")
+    json_path, log_path = ensure_result_paths(args.model_name)
+    results_so_far: List[Dict[str, Any]] = load_existing_results(json_path)
+    completed = len(results_so_far)
+    remaining = max(0, args.num_runs - completed)
 
-    while len(results) < args.num_runs:
-        batch_size = min(args.batch_size, args.num_runs - len(results))
+    random.seed(SEED + completed)  # shift seed to avoid duplicate early samples on resume
+    append_log(
+        log_path,
+        f"start run | model={args.model_name} | run_id={run_id} | target={args.num_runs} | completed={completed} | remaining={remaining}"
+    )
+
+    pbar = tqdm(total=args.num_runs, desc="collecting", initial=completed)
+
+    while completed < args.num_runs:
+        batch_size = min(args.batch_size, args.num_runs - completed)
         message_list, metadata_list = generate_batch_prompts(batch_size, args.model_name)
 
-        # fan-out requests; thread pool size equals batch_size
-        llm_responses = backend.generate_batch(
-            message_list=message_list,
-            max_tokens=args.max_new_tokens,
-            temperature=args.temperature,
-            top_p=args.top_p,
-        )
+        if 'gpt-oss' in args.model_name.lower():
+            llm_responses = asyncio.run(
+                backend.generate_batch_async(
+                    message_list=message_list,
+                    max_tokens=args.max_new_tokens,
+                    temperature=args.temperature,
+                    top_p=args.top_p,
+                    concurrency=min(args.concurrency, max(1, len(message_list))),
+                    request_timeout=args.request_timeout,
+                )
+            )
+        else:
+            llm_responses = backend.generate_batch(
+                message_list=message_list,
+                max_tokens=args.max_new_tokens,
+                temperature=args.temperature,
+                top_p=args.top_p,
+            )
 
+
+        new_rows: List[Dict[str, Any]] = []
         for i in range(batch_size):
             record_message = flatten_message_for_record(message_list[i], args.model_name)
-            row = dict(metadata_list[i])  # shallow copy
+            row = dict(metadata_list[i])
             row.update({
+                'sample_index': completed + i,
                 'message': record_message,
                 'llm_says': llm_responses[i],
                 'model_name': args.model_name,
+                'run_id': run_id,
             })
-            results.append(row)
+            new_rows.append(row)
             pbar.update(1)
 
+        results_so_far.extend(new_rows)
+        atomic_write_json(json_path, results_so_far)
+        completed += batch_size
+
+        empty_count = sum(1 for r in llm_responses if not (r and r.strip()))
+        append_log(
+            log_path,
+            f"batch saved | size={batch_size} | empty={empty_count} | completed={completed}/{args.num_runs} | file={os.path.basename(json_path)}"
+        )
+
     pbar.close()
-
-    # persist
-    slug = args.model_name.replace('/', '-')
-    json_path = os.path.join("results", f"{slug}.json")
-    os.makedirs(os.path.dirname(json_path), exist_ok=True)
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(results, f, ensure_ascii=False, indent=4)
-
     print(f'results saved to {json_path}')
     print('*' * 88)
