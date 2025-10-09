@@ -115,7 +115,7 @@ for attempt in $(seq 1 $MAX_ATTEMPTS); do
 done
 
 # ---- run travel fairness experiment (client) ----
-export VLLM_BASE_URL="${API}"
+export VLLM_BASE_URL="${API}/v1"
 
 echo "[client] running travel_fairness.py with 200 generations on ${MODEL}"
 python3 run.py \
