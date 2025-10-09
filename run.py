@@ -22,10 +22,9 @@ import random
 import argparse
 from typing import List, Dict, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timezone
 from tqdm import tqdm
 import asyncio
-
 import httpx
 
 
@@ -148,7 +147,7 @@ def load_existing_results(json_path: str) -> List[Dict[str, Any]]:
         return []
 
 def append_log(log_path: str, message: str) -> None:
-    ts = datetime.utcnow().isoformat(timespec='seconds') + "Z"
+    ts = datetime.now(timezone.utc).isoformat(timespec='seconds').replace("+00:00", "Z")
     with open(log_path, 'a', encoding='utf-8') as f:
         f.write(f"[{ts}] {message}\n")
 
@@ -219,7 +218,7 @@ class VLLMOpenAIBackend(BaseBackend):
         url = "/chat/completions"
 
         limits = httpx.Limits(max_connections=concurrency, max_keepalive_connections=concurrency)
-        timeout = httpx.Timeout(connect=10.0, read=request_timeout, write=30.0)
+        timeout = httpx.Timeout(connect=10.0, read=request_timeout, write=30.0, pool=10.0)
 
         async with httpx.AsyncClient(
             base_url=self.base_url,
@@ -344,7 +343,8 @@ if __name__ == '__main__':
     print(f"running service equality experiments with {args.model_name}")
 
     backend = get_backend(args.model_name, SYSTEM_PROMPT, args.vllm_base_url)
-    run_id = os.environ.get('RUN_ID', datetime.utcnow().strftime('%Y%m%dT%H%M%SZ'))
+    run_id = os.environ.get('RUN_ID', datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
+
 
     json_path, log_path = ensure_result_paths(args.model_name)
     results_so_far: List[Dict[str, Any]] = load_existing_results(json_path)
