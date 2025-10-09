@@ -1,0 +1,8 @@
+[2025-10-09T02:25:46Z] start run | model=openai/gpt-oss-120b | run_id=20251009T022546Z | target_ok=200 | ok_completed=0 | remaining=200
+[2025-10-09T02:31:48Z] batch saved | size=64 | ok=42 | empty=22 | ok_completed=42/200 | file=openai-gpt-oss-120b.json
+[2025-10-09T02:37:50Z] batch saved | size=64 | ok=38 | empty=26 | ok_completed=80/200 | file=openai-gpt-oss-120b.json
+[2025-10-09T02:43:51Z] batch saved | size=64 | ok=42 | empty=22 | ok_completed=122/200 | file=openai-gpt-oss-120b.json
+[2025-10-09T02:49:53Z] batch saved | size=64 | ok=45 | empty=19 | ok_completed=167/200 | file=openai-gpt-oss-120b.json
+[2025-10-09T02:55:55Z] batch saved | size=33 | ok=22 | empty=11 | ok_completed=189/200 | file=openai-gpt-oss-120b.json
+[2025-10-09T03:01:56Z] batch saved | size=11 | ok=7 | empty=4 | ok_completed=196/200 | file=openai-gpt-oss-120b.json
+[2025-10-09T03:05:56Z] batch saved | size=4 | ok=4 | empty=0 | ok_completed=200/200 | file=openai-gpt-oss-120b.json
