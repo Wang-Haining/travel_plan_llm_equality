@@ -190,21 +190,19 @@ def openai_generate_batch(messages_list: List[List[Dict]], model_name: str, max_
 
 
 def google_generate_batch(messages_list: List[List[Dict]], model_name: str, max_output_tokens: int) -> List[str]:
-    """Generate with Google Generative AI (Gemini)."""
+    """Generate with Google Generative AI (Gemini), using system_instruction."""
     api_key = os.environ.get("GOOGLE_API_KEY")
     if not api_key:
         raise RuntimeError("Google Generative AI API key is not set.")
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(model_name)
+
+    # pass the system prompt via system_instruction; send only user content as prompt
+    model = genai.GenerativeModel(model_name, system_instruction=SYSTEM_PROMPT)
 
     out = []
     for messages in messages_list:
-        sys_texts = [m["content"] for m in messages if m["role"] == "system"]
         user_texts = [m["content"] for m in messages if m["role"] == "user"]
-        prompt = ""
-        if sys_texts:
-            prompt += "System:\n" + "\n".join(sys_texts).strip() + "\n\n"
-        prompt += "User:\n" + "\n\n".join(user_texts).strip()
+        prompt = "\n\n".join(user_texts).strip()
 
         resp = model.generate_content(
             prompt,
@@ -214,12 +212,7 @@ def google_generate_batch(messages_list: List[List[Dict]], model_name: str, max_
                 "max_output_tokens": max_output_tokens,
             },
         )
-        text = (getattr(resp, "text", None) or "").strip()
-        if not text and getattr(resp, "candidates", None):
-            parts = getattr(resp.candidates[0].content, "parts", [])
-            if parts and hasattr(parts[0], "text"):
-                text = (parts[0].text or "").strip()
-        out.append(text)
+        out.append((getattr(resp, "text", "") or "").strip())
     return out
 
 
@@ -333,7 +326,7 @@ if __name__ == "__main__":
         quant_cfg = infer_hf_quant_config(args.model_name)
         hf_model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
-            dtype=torch.float16 if device.startswith("cuda") else torch.float32,
+            dtype=torch.float16,
             quantization_config=quant_cfg,
             device_map=device if device.startswith("cuda") else None,
             force_download=False,
