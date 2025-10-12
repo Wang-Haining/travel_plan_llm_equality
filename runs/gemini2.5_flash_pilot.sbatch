@@ -23,5 +23,5 @@ module load Python/3.10.8-GCCcore-12.2.0
 python -m run \
   --backend google \
   --model_name gemini-2.5-flash \
-  --num_runs 2000 \
+  --num_runs 200 \
   --batch_size 10
