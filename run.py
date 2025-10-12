@@ -337,7 +337,7 @@ if __name__ == "__main__":
         quant_cfg = infer_hf_quant_config(args.model_name)
         hf_model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
-            torch_dtype=torch.float16 if device.startswith("cuda") else torch.float32,
+            dtype=torch.float16 if device.startswith("cuda") else torch.float32,
             quantization_config=quant_cfg,
             device_map=device if device.startswith("cuda") else None,
             force_download=False,
