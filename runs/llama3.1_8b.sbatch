@@ -1,8 +1,8 @@
 #!/bin/sh
-#SBATCH --job-name=llama3_70b
+#SBATCH --job-name=llama3.1_8b
 ##SBATCH --account=group-jasonclark
-#SBATCH --partition=nextgen-gpu
-#SBATCH --gres=gpu:h100:1
+#SBATCH --partition=gpuunsafe
+#SBATCH --gres=gpu:a40:1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=32G
 #SBATCH --time=2-00:00:00
@@ -16,4 +16,4 @@ module load CUDA/12.2.0
 export HF_HOME=$HOME/models
 
 . .venv/bin/activate
-python -m run --num_runs 2000 --model_name 'meta-llama/Meta-Llama-3-70B-Instruct' --batch_size 10
+python -m run --num_runs 2000 --model_name 'meta-llama/Meta-Llama-3.1-8B-Instruct' --batch_size 10
