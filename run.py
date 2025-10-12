@@ -191,7 +191,7 @@ def openai_generate_batch(messages_list: List[List[Dict]], model_name: str, max_
 
 def google_generate_batch(messages_list: List[List[Dict]], model_name: str, max_output_tokens: int) -> List[str]:
     """Generate with Google Generative AI (Gemini)."""
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get("GOOGLE_API_KEY")
     if not api_key:
         raise RuntimeError("Google Generative AI API key is not set.")
     genai.configure(api_key=api_key)
