@@ -11,8 +11,9 @@
 #SBATCH --mail-user=haining.wang@montana.edu
 #SBATCH --mail-type=ALL
 
-module load Python/3.10.8-GCCcore-12.2.0
-module load CUDA/12.2.0
+module purge
+module unload Python CUDA 2>/dev/null || true
+module load OpenSSL/3 Python/3.12.3-GCCcore-13.3.0 CUDA/12.3.0
 export HF_HOME=$HOME/models
 
 . .venv/bin/activate

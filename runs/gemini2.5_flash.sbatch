@@ -11,7 +11,9 @@
 #SBATCH --mail-type=ALL
 
 # modules (cpu run; no cuda needed)
-module load Python/3.10.8-GCCcore-12.2.0
+module purge
+module unload Python CUDA 2>/dev/null || true
+module load OpenSSL/3 Python/3.12.3-GCCcore-13.3.0
 
 # ensure api key exists in environment (any of these names is acceptable in your code)
 : "${GOOGLE_API_KEY:?GOOGLE_API_KEY is not set}"
