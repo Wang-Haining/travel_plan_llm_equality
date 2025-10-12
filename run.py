@@ -31,7 +31,7 @@ import google.generativeai as genai
 
 
 # fixed seed for reproducibility (deterministic per index when resuming)
-SEED = 42
+SEED = 46202
 torch.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
