@@ -18,17 +18,16 @@ import argparse
 import csv
 import json
 import os
-import sys
 import random
+import sys
+import time
 from typing import Dict, List, Sequence, Tuple
 
+import google.generativeai as genai
+import openai
 import torch
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-
-import openai
-import google.generativeai as genai
-
 
 # fixed seed for reproducibility (deterministic per index when resuming)
 SEED = 46202
@@ -80,7 +79,9 @@ def choice_from_list(items: Sequence[str], rnd: random.Random) -> str:
     return items[rnd.randrange(len(items))]
 
 
-def generate_prompt_for_index(sample_index: int, model_hint: str) -> Tuple[List[Dict], Dict]:
+def generate_prompt_for_index(
+    sample_index: int, model_hint: str
+) -> Tuple[List[Dict], Dict]:
     """Build one deterministic (messages, metadata) pair for a given index.
 
     Args:
@@ -123,7 +124,9 @@ def generate_prompt_for_index(sample_index: int, model_hint: str) -> Tuple[List[
     return messages, metadata
 
 
-def generate_batch_prompts(start_index: int, count: int, model_hint: str) -> Tuple[List[List[Dict]], List[Dict]]:
+def generate_batch_prompts(
+    start_index: int, count: int, model_hint: str
+) -> Tuple[List[List[Dict]], List[Dict]]:
     """Generate a consecutive batch of prompts deterministically.
 
     Args:
@@ -144,10 +147,14 @@ def generate_batch_prompts(start_index: int, count: int, model_hint: str) -> Tup
 
 def infer_hf_quant_config(model_name: str) -> BitsAndBytesConfig | None:
     """Infer quantization config for large models."""
-    return BitsAndBytesConfig(load_in_4bit=True) if "70b" in model_name.lower() else None
+    return (
+        BitsAndBytesConfig(load_in_4bit=True) if "70b" in model_name.lower() else None
+    )
 
 
-def hf_generate_batch(model, tokenizer, messages_list: List[List[Dict]], max_new_tokens: int) -> List[str]:
+def hf_generate_batch(
+    model, tokenizer, messages_list: List[List[Dict]], max_new_tokens: int
+) -> List[str]:
     """Generate with a transformers model in one padded batch."""
     input_ids = tokenizer.apply_chat_template(
         messages_list,
@@ -164,12 +171,16 @@ def hf_generate_batch(model, tokenizer, messages_list: List[List[Dict]], max_new
         do_sample=True,
     )
 
-    new_token_ids = [out_ids[in_ids.shape[-1]:] for out_ids, in_ids in zip(outputs, input_ids)]
+    new_token_ids = [
+        out_ids[in_ids.shape[-1] :] for out_ids, in_ids in zip(outputs, input_ids)
+    ]
     texts = tokenizer.batch_decode(new_token_ids, skip_special_tokens=True)
     return [t.lstrip().lstrip("assistant\n\n") for t in texts]
 
 
-def openai_generate_batch(messages_list: List[List[Dict]], model_name: str, max_tokens: int) -> List[str]:
+def openai_generate_batch(
+    messages_list: List[List[Dict]], model_name: str, max_tokens: int
+) -> List[str]:
     """Generate with OpenAI Chat Completions API (loop; simple and robust)."""
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
@@ -189,14 +200,14 @@ def openai_generate_batch(messages_list: List[List[Dict]], model_name: str, max_
     return out
 
 
-def google_generate_batch(messages_list: List[List[Dict]], model_name: str, max_output_tokens: int) -> List[str]:
-    """Generate with Google Generative AI (Gemini), using system_instruction."""
+def google_generate_batch(
+    messages_list: List[List[Dict]], model_name: str, max_output_tokens: int
+) -> List[str]:
     api_key = os.environ.get("GOOGLE_API_KEY")
     if not api_key:
         raise RuntimeError("Google Generative AI API key is not set.")
     genai.configure(api_key=api_key)
 
-    # pass the system prompt via system_instruction; send only user content as prompt
     model = genai.GenerativeModel(model_name, system_instruction=SYSTEM_PROMPT)
 
     out = []
@@ -204,15 +215,26 @@ def google_generate_batch(messages_list: List[List[Dict]], model_name: str, max_
         user_texts = [m["content"] for m in messages if m["role"] == "user"]
         prompt = "\n\n".join(user_texts).strip()
 
-        resp = model.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.7,
-                "top_p": 0.9,
-                "max_output_tokens": max_output_tokens,
-            },
-        )
-        out.append((getattr(resp, "text", "") or "").strip())
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                resp = model.generate_content(
+                    prompt,
+                    generation_config={
+                        "temperature": 0.7,
+                        "top_p": 0.9,
+                        "max_output_tokens": max_output_tokens,
+                    },
+                )
+                out.append((getattr(resp, "text", "") or "").strip())
+                break
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    time.sleep(2**attempt)  # Exponential backoff: 1s, 2s, 4s
+                    continue
+                else:
+                    # On final failure, append error message
+                    out.append(f"ERROR: {str(e)}")
     return out
 
 
@@ -322,7 +344,9 @@ if __name__ == "__main__":
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     if args.backend == "huggingface":
-        hf_tokenizer = AutoTokenizer.from_pretrained(args.model_name, padding_side="left")
+        hf_tokenizer = AutoTokenizer.from_pretrained(
+            args.model_name, padding_side="left"
+        )
         quant_cfg = infer_hf_quant_config(args.model_name)
         hf_model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
@@ -363,16 +387,26 @@ if __name__ == "__main__":
 
         # generate via chosen backend
         if args.backend == "huggingface":
-            llm_texts = hf_generate_batch(hf_model, hf_tokenizer, messages_list, args.max_new_tokens)
+            llm_texts = hf_generate_batch(
+                hf_model, hf_tokenizer, messages_list, args.max_new_tokens
+            )
             render_for_row = lambda msg: hf_tokenizer.apply_chat_template(
                 msg, tokenize=False, add_generation_prompt=False
             )
         elif args.backend == "openai":
-            llm_texts = openai_generate_batch(messages_list, args.model_name, args.max_new_tokens)
-            render_for_row = lambda msg: "\n".join(f"{m['role'].upper()}: {m['content']}" for m in msg)
+            llm_texts = openai_generate_batch(
+                messages_list, args.model_name, args.max_new_tokens
+            )
+            render_for_row = lambda msg: "\n".join(
+                f"{m['role'].upper()}: {m['content']}" for m in msg
+            )
         else:
-            llm_texts = google_generate_batch(messages_list, args.model_name, args.max_new_tokens)
-            render_for_row = lambda msg: "\n".join(f"{m['role'].upper()}: {m['content']}" for m in msg)
+            llm_texts = google_generate_batch(
+                messages_list, args.model_name, args.max_new_tokens
+            )
+            render_for_row = lambda msg: "\n".join(
+                f"{m['role'].upper()}: {m['content']}" for m in msg
+            )
 
         # assemble rows and append to csv
         rows = []
