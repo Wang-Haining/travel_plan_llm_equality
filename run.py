@@ -187,6 +187,9 @@ def openai_generate_batch(
         raise RuntimeError("OPENAI_API_KEY is not set.")
     client = openai.OpenAI(api_key=api_key)
 
+    is_new_model = any(x in model_name.lower() for x in ["gpt-5", "o1", "o3", "o4"])
+    token_param = "max_completion_tokens" if is_new_model else "max_tokens"
+
     out = []
     for messages in messages_list:
         resp = client.chat.completions.create(
@@ -194,7 +197,7 @@ def openai_generate_batch(
             messages=messages,
             temperature=0.7,
             top_p=0.9,
-            max_tokens=max_tokens,
+            **{token_param: max_tokens},
         )
         out.append((resp.choices[0].message.content or "").strip())
     return out
