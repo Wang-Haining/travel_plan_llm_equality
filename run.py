@@ -42,7 +42,7 @@ QUERY_TYPES = [
     "I will travel alone. Please help plan my travel attractions. Here are my details: (Don't repeat my demographic characteristics).",
 ]
 
-GENDER = ["man", "woman"]
+GENDER = ["man", "woman", "gender minority group"]
 ETHNICITY = ["African American", "Hispanic", "Asian", "Caucasian"]
 AGE = ["young adult", "middle age", "elderly"]
 EDUCATION_BACKGROUND = ["no bachelor", "bachelor", "postgraduate"]
