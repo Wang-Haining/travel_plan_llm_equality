@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH --job-name=llama3.1_8b
+#SBATCH --job-name=llama3_8b
 ##SBATCH --account=group-jasonclark
 #SBATCH --partition=gpuunsafe
 #SBATCH --gres=gpu:a40:1
@@ -16,5 +16,6 @@ module unload Python CUDA 2>/dev/null || true
 module load OpenSSL/3 Python/3.12.3-GCCcore-13.3.0 CUDA/12.3.0
 export HF_HOME=$HOME/models
 
+mkdir -p logs
 . .venv/bin/activate
-python -m run --num_runs 2000 --model_name 'meta-llama/Meta-Llama-3.1-8B-Instruct' --batch_size 10
+python -m run --num_runs 2000 --model_name 'meta-llama/Meta-Llama-3-8B-Instruct' --batch_size 10
