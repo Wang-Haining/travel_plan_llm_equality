@@ -16,5 +16,6 @@ module unload Python CUDA 2>/dev/null || true
 module load OpenSSL/3 Python/3.12.3-GCCcore-13.3.0 CUDA/12.3.0
 export HF_HOME=$HOME/models
 
+mkdir -p logs
 . .venv/bin/activate
 python -m run --num_runs 2000 --model_name 'google/gemma-2-9b-it' --batch_size 10
